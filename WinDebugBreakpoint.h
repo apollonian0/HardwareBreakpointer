@@ -12,7 +12,7 @@ class WinDebugBreakpointManager
 public:
 
 	template<class Value_t>
-	static bool SetBreakpoint(const Value_t* const address, const int index)
+	static void SetBreakpoint(const Value_t* const address, const int index)
 	{
 		HANDLE threadHandle = 0;
 		auto success = DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &threadHandle, 0, false, DUPLICATE_SAME_ACCESS);
@@ -21,7 +21,8 @@ public:
 		auto eventHandle = CreateEvent(nullptr, true, false, TEXT("DebugBreakpoint"));
 		assert(eventHandle);
 
-		auto* const pBreakpointInfo = std::make_unique({ reinterpret_cast<DWORD_PTR>(address), threadHandle, eventHandle, index, false });
+		const auto pBreakpointInfo = std::unique_ptr<BreakpointInfo>(new BreakpointInfo{
+			reinterpret_cast<DWORD_PTR>(address), threadHandle, eventHandle, index, false });
 
 		HANDLE setBreakPointThread = CreateThread(nullptr, 0, SetBreakpointOnThread, reinterpret_cast<LPVOID>(&*pBreakpointInfo), 0, 0);
 		assert(setBreakPointThread);
@@ -32,7 +33,8 @@ public:
 
 private:
 
-	static template<class Value_t> Value_t& SetBit(Value_t& value, const int bit)
+	template<class Value_t>
+	static Value_t& SetBit(Value_t& value, const int bit)
 	{
 		return value |= (static_cast<Value_t>(1) << bit);
 	};
@@ -49,8 +51,6 @@ private:
 
 		auto success = GetThreadContext(breakpointInfo.m_threadHandle, &context);
 		assert(success);
-
-		
 
 		context.Dr0 = breakpointInfo.m_pVariableAddress;
 		context.Dr7 = 1;
