@@ -5,12 +5,21 @@
 
 #include "WinDebugBreakpoint.h"
 
-int Data[]{ 0, 1, 2 };
+//int Data[]{ 0, 1, 2 };
+char Data[] = { 0, 1, 2, 3, 4 };
 
 int main()
 {
-	WinDebugBreakpointManager::SetBreakpoint(Data + 1, 0);
-	Data[1] = 2;
+	WinDebugBreakpointManager::SetBreakpoint(&Data, WinDebugBreakpointManager::RegisterIndex::FIRST, WinDebugBreakpointManager::DataSize::FOUR_BYTES);
+	Data[2] = 0;
+	
+	WinDebugBreakpointManager::ClearBreakpoint(WinDebugBreakpointManager::RegisterIndex::FIRST);
+	Sleep(10);
+
+	Data[2] = 3;
+
+	
+	Data[4] = 0;
 
 	return 0;
 }
