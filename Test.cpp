@@ -10,16 +10,14 @@ char Data[] = { 0, 1, 2, 3, 4 };
 
 int main()
 {
-	WinDebugBreakpointManager::SetBreakpoint(&Data, WinDebugBreakpointManager::RegisterIndex::FIRST, WinDebugBreakpointManager::DataSize::FOUR_BYTES);
-	Data[2] = 0;
-	
+	WinDebugBreakpointManager::SetBreakpoint(&Data, WinDebugBreakpointManager::RegisterIndex::FIRST, WinDebugBreakpointManager::DataSize::TWO_BYTES);
+	Data[0] = 5;
+	Data[1] = 3;
+	Data[2] = 4;
+
 	WinDebugBreakpointManager::ClearBreakpoint(WinDebugBreakpointManager::RegisterIndex::FIRST);
-	Sleep(10);
-
 	Data[2] = 3;
-
-	
-	Data[4] = 0;
+	Data[0] = 6;
 
 	return 0;
 }

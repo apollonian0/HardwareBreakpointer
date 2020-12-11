@@ -11,9 +11,9 @@ class WinDebugBreakpointManager
 {
 public:
 
-	enum class RegisterIndex { FIRST, SECOND, THIRD, FOURTH };
-	enum class BreakCondition { WRITE, READ_WRITE};
-	enum class DataSize { ONE_BYTE, TWO_BYTES, FOUR_BYTES, EIGHT_BYTES };
+	enum class RegisterIndex{ FIRST, SECOND, THIRD, FOURTH };
+	enum class BreakCondition { WRITE = 1, READ_WRITE = 3};
+	enum class DataSize { ONE_BYTE, TWO_BYTES, EIGHT_BYTES, FOUR_BYTES};
 
 	template<class Value_t>
 	static void SetBreakpoint(const Value_t* const address, const RegisterIndex registerIndex, const DataSize dataSize, const BreakCondition breakCondition = BreakCondition::WRITE)
@@ -25,10 +25,8 @@ public:
 		auto eventHandle = CreateEvent(nullptr, true, false, TEXT("DebugAddBreakpoint"));
 		assert(eventHandle);
 
-		const auto pBreakpointInfo = std::unique_ptr<BreakpointInfo>(new BreakpointInfo{
-			reinterpret_cast<DWORD_PTR>(address), threadHandle, eventHandle, registerIndex, breakCondition, dataSize });
-
-		auto addBreakPointThread = CreateThread(nullptr, 0, AddBreakpoint, reinterpret_cast<LPVOID>(&*pBreakpointInfo), 0, 0);
+		BreakpointInfo breakpointInfo = {reinterpret_cast<DWORD_PTR>(address), threadHandle, eventHandle, registerIndex, breakCondition, dataSize };
+		auto addBreakPointThread = CreateThread(nullptr, 0, AddBreakpoint, reinterpret_cast<LPVOID>(&breakpointInfo), 0, 0);
 		assert(addBreakPointThread);
 
 		WaitForSingleObject(eventHandle, INFINITE);
@@ -40,26 +38,19 @@ public:
 		HANDLE threadHandle = 0;
 		auto success = DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &threadHandle, 0, false, DUPLICATE_SAME_ACCESS);
 		assert(success);
-
-		auto pBreakpointInfo = std::make_unique<BreakpointInfo>();
-		pBreakpointInfo->m_threadHandle = threadHandle;
-		pBreakpointInfo->m_registerIndex = registerIndex;
-		pBreakpointInfo->m_eventHandle = CreateEvent(nullptr, true, false, TEXT("DebugRemoveBreakpoint"));
 		
-		auto removeBreakPointThread = CreateThread(nullptr, 0, RemoveBreakpoint, reinterpret_cast<LPVOID>(&*pBreakpointInfo), 0, 0);
+		auto eventHandle = CreateEvent(nullptr, true, false, TEXT("DebugRemoveBreakpoint"));
+		assert(eventHandle);
+
+		BreakpointInfo breakpointInfo = { NULL, threadHandle, eventHandle, registerIndex };
+		auto removeBreakPointThread = CreateThread(nullptr, 0, RemoveBreakpoint, reinterpret_cast<LPVOID>(&breakpointInfo), 0, 0);
 		assert(removeBreakPointThread);
 
-		WaitForSingleObject(pBreakpointInfo->m_eventHandle, INFINITE);
+		WaitForSingleObject(breakpointInfo.m_eventHandle, INFINITE);
 		CloseHandle(removeBreakPointThread);
 	}
 
 private:
-
-	template<class Value_t>
-	static Value_t& SetBit(Value_t& value, const int bit)
-	{
-		return value |= (static_cast<Value_t>(1) << bit);
-	};
 
 	static DWORD WINAPI AddBreakpoint(LPVOID const pData)
 	{
@@ -74,41 +65,11 @@ private:
 		auto success = GetThreadContext(breakpointInfo.m_threadHandle, &context);
 		assert(success);
 
-		const int registerOffset = static_cast<int>(breakpointInfo.m_registerIndex);
+		const auto registerOffset = static_cast<int>(breakpointInfo.m_registerIndex);
 		*(&context.Dr0 + registerOffset) = breakpointInfo.m_pVariableAddress;
-		
-		SetBit(context.Dr7, registerOffset * 2);
-		if (breakpointInfo.m_breakCondition == BreakCondition::WRITE)
-		{
-			SetBit(context.Dr7, 16 + registerOffset * 2);
-		}
-		else
-		{
-			SetBit(context.Dr7, 16 + registerOffset * 2);
-			SetBit(context.Dr7, 17 + registerOffset * 2);
-		}
-
-		switch (breakpointInfo.m_dataSize)
-		{
-		case DataSize::TWO_BYTES:
-		{
-			SetBit(context.Dr7, 18 + registerOffset * 2);
-			break;
-		}
-		case DataSize::FOUR_BYTES:
-		{
-			SetBit(context.Dr7, 18 + registerOffset * 2);
-			SetBit(context.Dr7, 19 + registerOffset * 2);
-			break;
-		}
-		case DataSize::EIGHT_BYTES:
-		{
-			SetBit(context.Dr7, 19 + registerOffset * 2);
-			break;
-		}
-		default:
-			break;
-		}
+		const auto registerStride = registerOffset * 2;
+		const auto upperBytesMask = static_cast<int>(breakpointInfo.m_breakCondition) + (static_cast<int>(breakpointInfo.m_dataSize) << 2);
+		context.Dr7 |= 1 << registerStride | upperBytesMask << (16 + registerOffset * 2);
 
 		success = SetThreadContext(breakpointInfo.m_threadHandle, &context);
 		assert(success);
@@ -142,11 +103,7 @@ private:
 
 		const int registerOffset = static_cast<int>(breakpointInfo.m_registerIndex);
 		*(&context.Dr0 + registerOffset) = NULL;
-
-		ClearBit(context.Dr7, 16 + registerOffset * 2);
-		ClearBit(context.Dr7, 17 + registerOffset * 2);
-		ClearBit(context.Dr7, 18 + registerOffset * 2);
-		ClearBit(context.Dr7, 19 + registerOffset * 2);
+		context.Dr7 &= ~(7 << (16 + registerOffset * 2));
 
 		success = SetThreadContext(breakpointInfo.m_threadHandle, &context);
 		assert(success);
