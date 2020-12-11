@@ -3,21 +3,37 @@
 
 #pragma once
 
+#include <array>
 #include "WinDebugBreakpoint.h"
 
-//int Data[]{ 0, 1, 2 };
-char Data[] = { 0, 1, 2, 3, 4 };
+auto Data = std::array<char, 16>{};
 
 int main()
 {
-	WinDebugBreakpointManager::SetBreakpoint(&Data, WinDebugBreakpointManager::RegisterIndex::FIRST, WinDebugBreakpointManager::DataSize::TWO_BYTES);
-	Data[0] = 5;
-	Data[1] = 3;
-	Data[2] = 4;
+	WinDebugBreakpointManager::SetBreakpoint(&Data[0], WinDebugBreakpointManager::RegisterIndex::FIRST, WinDebugBreakpointManager::DataSize::ONE_BYTE);
+
+	WinDebugBreakpointManager::SetBreakpoint(&Data[2], WinDebugBreakpointManager::RegisterIndex::SECOND, WinDebugBreakpointManager::DataSize::TWO_BYTES);
+
+	WinDebugBreakpointManager::SetBreakpoint(&Data[4], WinDebugBreakpointManager::RegisterIndex::THIRD, WinDebugBreakpointManager::DataSize::FOUR_BYTES);
+
+	WinDebugBreakpointManager::SetBreakpoint(&Data[8], WinDebugBreakpointManager::RegisterIndex::FOURTH, WinDebugBreakpointManager::DataSize::EIGHT_BYTES);
+
+	Data[0] = 1;
+	Data[2] = 1;
+	Data[5] = 1;
+	Data[14] = 1;
 
 	WinDebugBreakpointManager::ClearBreakpoint(WinDebugBreakpointManager::RegisterIndex::FIRST);
-	Data[2] = 3;
-	Data[0] = 6;
+	Data[0] = 1;
 
+	WinDebugBreakpointManager::ClearBreakpoint(WinDebugBreakpointManager::RegisterIndex::SECOND);
+	Data[2] = 1;
+
+	WinDebugBreakpointManager::ClearBreakpoint(WinDebugBreakpointManager::RegisterIndex::THIRD);
+	Data[5] = 1;
+
+	WinDebugBreakpointManager::ClearBreakpoint(WinDebugBreakpointManager::RegisterIndex::FOURTH);
+	Data[15] = 1;
+	
 	return 0;
 }
