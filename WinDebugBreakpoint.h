@@ -1,10 +1,13 @@
 // Copyright Ben Howenstein 2020. All rights reserved.
 //
 
+/*
+	This is a simple tool for manipulating hardware breakpoints on Win32/64 x86 platforms.
+*/
+
 #pragma once
 
 #include <windows.h>
-#include <memory>
 #include <assert.h>
 
 class WinDebugBreakpointManager

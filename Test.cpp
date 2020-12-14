@@ -6,10 +6,10 @@
 #include <array>
 #include "WinDebugBreakpoint.h"
 
-auto Data = std::array<char, 16>{};
-
 int main()
 {
+	auto Data = std::array<char, 16>{};
+
 	WinDebugBreakpointManager::SetBreakpoint(&Data[0], WinDebugBreakpointManager::RegisterIndex::FIRST, WinDebugBreakpointManager::DataSize::ONE_BYTE);
 
 	WinDebugBreakpointManager::SetBreakpoint(&Data[2], WinDebugBreakpointManager::RegisterIndex::SECOND, WinDebugBreakpointManager::DataSize::TWO_BYTES);
